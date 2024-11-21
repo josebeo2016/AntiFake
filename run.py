@@ -58,13 +58,13 @@ TORTOISE_ENCODER_MODEL_DIFFUSION = None
 RTVC_ENCODER_MODEL = None
 
 SAMPLING_RATE = 16000
-ATTACK_ITERATIONS = 1000 
+ATTACK_ITERATIONS = 100 
 DEVICE = 'cuda'
 ######################################### Tunable Parameters #############################################
 quality_weight_snr = 0.005
 quality_weight_L2 = 0.05
 quality_weight_frequency = 0.3 
-learning_rate = 0.02
+learning_rate = 1e-4
 weight_decay_iter = 100 
 weight_decay_rate = 0.9
 avc_scale = 0.18
@@ -72,6 +72,7 @@ coqui_scale = 0.85
 tortoise_autoregressive_scale = 0.02
 tortoise_diffusion_scale = 0.014
 rtvc_scale = 1
+QUALITY_THRESHOLD = -1.5
 ##########################################################################################################
 
 
@@ -206,6 +207,10 @@ def frequency_filter(wav_diff):
     loss = torch.sum(diff_spec) / len(diff_spec) 
     return loss
 
+
+
+
+
 def attack_iteration(wav_tensor_list, 
                     avc_embed_initial = None,
                     avc_embed_target = None,
@@ -278,7 +283,12 @@ def attack_iteration(wav_tensor_list,
 
         print("Quality term: ", quality_term)
         print("Loss: ", loss)
-            
+        
+        # PHUCDT
+        # stop the attack if the quality_term is < Quality threshold
+        if quality_term < QUALITY_THRESHOLD:
+            break
+        
         loss.backward(retain_graph=True)
         
         attributions = wav_tensor_updated.grad.data
@@ -444,32 +454,32 @@ if __name__ == "__main__":
     target_speakers_selected = target_speakers_files[:NUM_RANDOM_TARGET_SPEAKER]
     
     # User listens to source and targets, assign score to each
-    pygame.mixer.init()
-    user_scores = []
-    for path in target_speakers_selected:
-        print(f"\nSource speaker: {source_speaker_path}")
-        print(f"Target speaker: {path}")
-        input(f"Press ENTER to listen to the source/target speaker sample pair, then input the difference score...\n")
+    # pygame.mixer.init()
+    # user_scores = []
+    # for path in target_speakers_selected:
+    #     print(f"\nSource speaker: {source_speaker_path}")
+    #     print(f"Target speaker: {path}")
+    #     input(f"Press ENTER to listen to the source/target speaker sample pair, then input the difference score...\n")
         
-        # # Load and play the wav file
-        # pygame.mixer.music.load(source_speaker_path)
-        # pygame.mixer.music.play()
-        # # Wait for the audio to finish playing
-        # while pygame.mixer.music.get_busy():
-        #     pygame.time.Clock().tick(10)
-        # pygame.mixer.music.load(path)
-        # pygame.mixer.music.play()
-        # while pygame.mixer.music.get_busy():
-        #     pygame.time.Clock().tick(10)
+    #     # # Load and play the wav file
+    #     # pygame.mixer.music.load(source_speaker_path)
+    #     # pygame.mixer.music.play()
+    #     # # Wait for the audio to finish playing
+    #     # while pygame.mixer.music.get_busy():
+    #     #     pygame.time.Clock().tick(10)
+    #     # pygame.mixer.music.load(path)
+    #     # pygame.mixer.music.play()
+    #     # while pygame.mixer.music.get_busy():
+    #     #     pygame.time.Clock().tick(10)
             
-        while True:
-            # Prompt user for a score
-            score = input(f"Please rate 1-5 how different the target speaker is, 1 being the most similar and 5 being the most different...\n")
-            if score in ['1', '2', '3', '4', '5']:  # Check if input is valid
-                user_scores.append(int(score))
-                break
-            else:
-                print("Invalid input. Please enter a score between 1-5.\n")
+    #     while True:
+    #         # Prompt user for a score
+    #         score = input(f"Please rate 1-5 how different the target speaker is, 1 being the most similar and 5 being the most different...\n")
+    #         if score in ['1', '2', '3', '4', '5']:  # Check if input is valid
+    #             user_scores.append(int(score))
+    #             break
+    #         else:
+    #             print("Invalid input. Please enter a score between 1-5.\n")
 
     # Compute source and target embedding differences, also load each encoder model to the global variables
     print("Computing target speakers embedding differences...")
@@ -504,10 +514,11 @@ if __name__ == "__main__":
     
     # Select target speaker that has the largest difference from the source with the analytic hierarchy process
     # Normalize the scores from list1 and list2
-    user_scores_weights = np.array(user_scores) / np.sum(user_scores)
+    # user_scores_weights = np.array(user_scores) / np.sum(user_scores)
     ltotal_embedding_diffs_weights = np.array(total_embedding_diffs) / np.sum(total_embedding_diffs)
     # Aggregate the weights
-    overall_weights = 0.5 * user_scores_weights + 0.5 * ltotal_embedding_diffs_weights
+    # overall_weights = 0.5 * user_scores_weights + 0.5 * ltotal_embedding_diffs_weights
+    overall_weights = ltotal_embedding_diffs_weights
     # Find the item with the highest score
     selected_target_speaker_path = target_speakers_selected[np.argmax(overall_weights)]
     

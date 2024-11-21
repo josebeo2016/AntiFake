@@ -49,6 +49,7 @@ def preprocess_wav(fpath_or_wav: Union[str, Path, np.ndarray],
     if normalize:
         wav = normalize_volume(wav, audio_norm_target_dBFS, increase_only=True)
     if webrtcvad and trim_silence:
+        print("trimmed silence?")
         wav = trim_long_silences(wav)
         
     # sf.write("preprocessed_audio.wav", wav, sampling_rate)
