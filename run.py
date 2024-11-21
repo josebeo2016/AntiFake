@@ -37,10 +37,10 @@ OUTPUT_DIR = './output/protected.wav'
 RTVC_LOSS = True
 AVC_LOSS = True
 COQUI_LOSS = True
-TORTOISE_AUTOREGRESSIVE_LOSS = False
-TORTOISE_DIFFUSION_LOSS = False
+TORTOISE_AUTOREGRESSIVE_LOSS = True
+TORTOISE_DIFFUSION_LOSS = True
 
-THRESHOLD_BASE = False
+THRESHOLD_BASE = True
 ############################################### Configs ##################################################
 TARGET_SPEAKER_DATABASE = './speakers_database'
 NUM_RANDOM_TARGET_SPEAKER = 24 
@@ -451,16 +451,16 @@ if __name__ == "__main__":
         print(f"Target speaker: {path}")
         input(f"Press ENTER to listen to the source/target speaker sample pair, then input the difference score...\n")
         
-        # Load and play the wav file
-        pygame.mixer.music.load(source_speaker_path)
-        pygame.mixer.music.play()
-        # Wait for the audio to finish playing
-        while pygame.mixer.music.get_busy():
-            pygame.time.Clock().tick(10)
-        pygame.mixer.music.load(path)
-        pygame.mixer.music.play()
-        while pygame.mixer.music.get_busy():
-            pygame.time.Clock().tick(10)
+        # # Load and play the wav file
+        # pygame.mixer.music.load(source_speaker_path)
+        # pygame.mixer.music.play()
+        # # Wait for the audio to finish playing
+        # while pygame.mixer.music.get_busy():
+        #     pygame.time.Clock().tick(10)
+        # pygame.mixer.music.load(path)
+        # pygame.mixer.music.play()
+        # while pygame.mixer.music.get_busy():
+        #     pygame.time.Clock().tick(10)
             
         while True:
             # Prompt user for a score

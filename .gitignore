@@ -1,0 +1,56 @@
+# general
+# general
+*~
+*.pyc
+\#*\#
+.\#*
+*DS_Store
+dummy_token_list
+empty.py
+out.txt
+espnet.egg-info/
+doc/_build
+slurm-*.out
+tmp*
+.eggs/
+.hypothesis/
+.idea
+.pytest_cache/
+__pycache__/
+check_autopep8
+.coverage
+.coverage.*
+htmlcov
+coverage.xml*
+test_utils/bats-core/
+test_utils/bats-support/
+test_utils/bats-assert/
+shellcheck*
+check_shellcheck*
+test_spm.vocab
+test_spm.model
+.vscode*
+*.vim
+*.swp
+*.nfs*
+# audio files
+*.mp3
+*.wav
+*.flac
+
+# zip files
+*.zip
+
+# model checkpoints
+*.ckpt
+*.h5
+*.pth
+*.pkl
+*.pt
+
+# feats
+*.npy
+
+# log files
+*.log
+
