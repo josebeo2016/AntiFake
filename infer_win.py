@@ -2,6 +2,7 @@ import os
 import sys
 import shutil
 from asv_redimnet import asv_score
+import librosa
 
 if __name__ == '__main__':
     # Input text
@@ -40,6 +41,11 @@ if __name__ == '__main__':
         # calculate the ASV score
     print("Calculating the ASV score...")
     os.chdir("../../..")
-    print("Score source vs TTS Tor from source: ", asv_score(f"samples/{speaker_name}/source/source.wav", f"samples/{speaker_name}/source/source_tor.wav"))
-    print("Score source vs protected: ", asv_score(f"samples/{speaker_name}/source/source.wav", f"samples/{speaker_name}/protected/protected.wav"))
-    print("Score source vs TTS Tor from protected: ", asv_score(f"samples/{speaker_name}/source/source.wav", f"samples/{speaker_name}/protected/protected_tor.wav"))
+    source_wav = librosa.load(f"samples/{speaker_name}/source/source.wav", sr=16000, mono=True)
+    protected_wav = librosa.load(f"samples/{speaker_name}/protected/protected.wav", sr=16000, mono=True)
+    source_tor_wav = librosa.load(f"samples/{speaker_name}/source/source_tor.wav", sr=16000, mono=True)
+    protected_tor_wav = librosa.load(f"samples/{speaker_name}/protected/protected_tor.wav", sr=16000, mono=True)
+    print("Score source vs TTS Tor from source: ", asv_score(source_wav, source_tor_wav))
+    
+    print("Score source vs protected: ", asv_score(source_wav, protected_wav))
+    print("Score source vs TTS Tor from protected: ", asv_score(source_wav, protected_tor_wav))
