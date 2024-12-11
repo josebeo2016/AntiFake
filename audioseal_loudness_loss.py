@@ -191,6 +191,10 @@ class TFLoudnessRatio(nn.Module):
         assert ref_sig.shape == out_sig.shape
         assert C == 1
         assert self.filter is not None
+        
+        # to cpu for julius
+        out_sig = out_sig.cpu()
+        ref_sig = ref_sig.cpu()
 
         bands_ref = self.filter(ref_sig).view(B * self.n_bands, 1, -1)
         bands_out = self.filter(out_sig).view(B * self.n_bands, 1, -1)
@@ -264,6 +268,7 @@ if __name__ == "__main__":
     print("Calculating TF-loudness ratio loss...")
     loss_fn = TFLoudnessRatio(sample_rate=SAMPLING_RATE, n_bands=16)
     loss = loss_fn(wav_tensor_pertub, wav_tensor_initial)
+    
     
     
     print(loss)
