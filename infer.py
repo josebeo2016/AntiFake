@@ -1,6 +1,7 @@
 import os
 import sys
 from asv_redimnet import asv_score
+import librosa
 if __name__ == '__main__':
     # input text
     input_text = input("Enter the text to generate: ")
