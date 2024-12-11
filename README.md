@@ -17,10 +17,12 @@ Alternatively, manually install all dependencies by running the following:
 ```
 conda create --name antifake python=3.7
 conda activate antifake
-pip install torch==1.13.0 torchvision==0.14.0 torchaudio==0.13.0 --no-cache
+conda install pytorch==1.13.1 torchvision==0.14.1 torchaudio==0.13.1 pytorch-cuda=11.6 -c pytorch -c nvidia
 pip install -r ./TTS/requirements.txt
 pip install -r requirements.txt
+pip install chardet
 sudo apt install ffmpeg
+pip install -r Official_AntiFake_Supplementary/antifake_synthesizer_bundle/tortoise-tts/requirements.txt
 ```
 
 Due to the file size restrictions, some of the files are moved to the supplementary materials hosted on [Drive](https://wustl.box.com/s/ss3wfa94whfrbjnuqau9k31wu7a73p3k). It contains the following files and folders: `antifake_synthesizer_bundle`, `autoregressive.pth`, `diffusion_decoder.pth`, `synthesizer.pt`, and `add_random_noise.py`. The `autoregressive.pth` and `diffusion_decoder.pth` are required to run the AntiFake system, please put them under the path of `AntiFake/tortoise/`; similarly, please put `synthesizer.pt` under the path `saved_models/default/`. The folder named `antifake_synthesizer_bundle` contains the speech synthesizers that can be used to validate the efficacy of the protected samples, and their usage is documented in `antifake_synthesizer_bundle/README_synthesizers.md`. The `add_random_noise.py` script is used for examine the efficacy of the optimized perturbations, for details please see **Additional Experiments**.

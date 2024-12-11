@@ -64,9 +64,9 @@ DEVICE = 'cuda'
 ######################################### Tunable Parameters #############################################
 quality_weight_snr = 0.005
 quality_weight_L2 = 0.05
-quality_weight_frequency = 0.2 
+quality_weight_frequency = 0.3 
 quality_weight_tfloudness = 0.6 
-learning_rate = 0.001
+learning_rate = 0.005
 weight_decay_iter = 100 
 weight_decay_rate = 0.9
 avc_scale = 0.18
@@ -74,7 +74,7 @@ coqui_scale = 0.85
 tortoise_autoregressive_scale = 0.02
 tortoise_diffusion_scale = 0.014
 rtvc_scale = 1
-QUALITY_THRESHOLD = -0.2
+QUALITY_THRESHOLD = -0.1
 ##########################################################################################################
 
 
@@ -284,8 +284,8 @@ def attack_iteration(wav_tensor_list,
         quality_tf_loudness = tfloudness(wav_tensor_updated.unsqueeze(0), wav_tensor_initial.unsqueeze(0))
         
         # aggregate loss 
-        quality_term = quality_weight_snr * quality_snr - quality_weight_L2 * quality_l2_norm - quality_weight_frequency * quality_frequency - quality_weight_tfloudness * quality_tf_loudness
-        # quality_term = quality_weight_snr * quality_snr - quality_weight_L2 * quality_l2_norm - quality_weight_tfloudness * quality_tf_loudness
+        # quality_term = quality_weight_snr * quality_snr - quality_weight_L2 * quality_l2_norm - quality_weight_frequency * quality_frequency - quality_weight_tfloudness * quality_tf_loudness
+        quality_term = quality_weight_snr * quality_snr - quality_weight_L2 * quality_l2_norm - quality_weight_tfloudness * quality_tf_loudness
         loss = -loss + quality_term
 
         print("Quality term: ", quality_term)
