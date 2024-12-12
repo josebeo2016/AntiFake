@@ -66,7 +66,7 @@ quality_weight_snr = 0.005
 quality_weight_L2 = 0.05
 quality_weight_frequency = 0.2 
 quality_weight_tfloudness = 0.6 
-learning_rate = 0.001
+learning_rate = 0.001 # 0.001
 weight_decay_iter = 100 
 weight_decay_rate = 0.9
 avc_scale = 0.18
@@ -74,7 +74,7 @@ coqui_scale = 0.85
 tortoise_autoregressive_scale = 0.02
 tortoise_diffusion_scale = 0.014
 rtvc_scale = 1
-QUALITY_THRESHOLD = -0.2
+QUALITY_THRESHOLD = -0.2 # -0.2
 ##########################################################################################################
 
 
@@ -234,7 +234,7 @@ def attack_iteration(wav_tensor_list,
                     rtvc_embed_threshold = None,
                     ):
     
-    start_time = time.time()
+    
 
     global learning_rate
     tfloudness = TFLoudnessRatio(sample_rate=SAMPLING_RATE, n_bands=16)
@@ -335,11 +335,7 @@ def attack_iteration(wav_tensor_list,
     sf.write(OUTPUT_DIR, wav_updated, SAMPLING_RATE)
     end_time = time.time()
 
-    used_time = end_time - start_time
-
-    # Print the optimization time in hours, minutes and seconds
-    print("Time used: %d hours, %d minutes, %d seconds" % (used_time // 3600, (used_time % 3600) // 60, used_time % 60))
-
+    
 # Compute embedding with RTVC 
 def rtvc_embed(wav_tensor_initial, mel_slices, target_speaker_path):
 
@@ -450,8 +446,10 @@ if __name__ == "__main__":
     
     wav_tensor_initial = torch.from_numpy(wav).unsqueeze(0).to(DEVICE)
     wav_tensor_initial.requires_grad = True
+    
+    start_time = time.time()
 
-    # Randomly select 10 audio from speaker database
+    # Randomly select audio from speakers database
     print("Randomly selecting target speakers...")
     target_speakers_files = []
     for root, dirs, files in os.walk(TARGET_SPEAKER_DATABASE):
@@ -592,3 +590,10 @@ if __name__ == "__main__":
     print('Source speaker path:' + source_speaker_path)
     print('Target speaker path:' + selected_target_speaker_path)
     print('Output path:' + OUTPUT_DIR)
+    
+    
+    used_time = end_time - start_time
+
+    # Print the optimization time in hours, minutes and seconds
+    print("Time used: %d hours, %d minutes, %d seconds" % (used_time // 3600, (used_time % 3600) // 60, used_time % 60))
+
