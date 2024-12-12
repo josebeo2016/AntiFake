@@ -41,7 +41,7 @@ COQUI_LOSS = True
 TORTOISE_AUTOREGRESSIVE_LOSS = True
 TORTOISE_DIFFUSION_LOSS = True
 
-THRESHOLD_BASE = True
+THRESHOLD_BASE = False
 ############################################### Configs ##################################################
 TARGET_SPEAKER_DATABASE = './speakers_database'
 NUM_RANDOM_TARGET_SPEAKER = 24 
@@ -66,7 +66,7 @@ quality_weight_snr = 0.005
 quality_weight_L2 = 0.05
 quality_weight_frequency = 0.2 
 quality_weight_tfloudness = 0.6 
-learning_rate = 0.001 # 0.001
+learning_rate = 0.0005 # 0.001
 weight_decay_iter = 100 
 weight_decay_rate = 0.9
 avc_scale = 0.18
@@ -74,7 +74,7 @@ coqui_scale = 0.85
 tortoise_autoregressive_scale = 0.02
 tortoise_diffusion_scale = 0.014
 rtvc_scale = 1
-QUALITY_THRESHOLD = -0.2 # -0.2
+QUALITY_THRESHOLD = -0.1 # -0.2
 ##########################################################################################################
 
 
@@ -333,7 +333,7 @@ def attack_iteration(wav_tensor_list,
         
     wav_updated = wav_tensor_updated.detach().cpu().numpy().squeeze()
     sf.write(OUTPUT_DIR, wav_updated, SAMPLING_RATE)
-    end_time = time.time()
+    
 
     
 # Compute embedding with RTVC 
@@ -527,8 +527,12 @@ if __name__ == "__main__":
     # overall_weights = 0.5 * user_scores_weights + 0.5 * ltotal_embedding_diffs_weights
     overall_weights = ltotal_embedding_diffs_weights
     # Find the item with the highest score
-    selected_target_speaker_path = target_speakers_selected[np.argmax(overall_weights)]
+    # selected_target_speaker_path = target_speakers_selected[np.argmax(overall_weights)]
+    # sort the target_speakers_selected following the overall_weights
+    target_speakers_selected = [x for _, x in sorted(zip(overall_weights, target_speakers_selected), key=lambda pair: pair[0], reverse=True)]
     
+    selected_target_speaker_path = target_speakers_selected[S]
+    print(f"Selected target speaker: {selected_target_speaker_path}")
     print('Target selected, preparing attack...')
     # Get selected target speaker's emebdding, preparing the attack
     avc_embed_initial = None
@@ -591,7 +595,7 @@ if __name__ == "__main__":
     print('Target speaker path:' + selected_target_speaker_path)
     print('Output path:' + OUTPUT_DIR)
     
-    
+    end_time = time.time()
     used_time = end_time - start_time
 
     # Print the optimization time in hours, minutes and seconds
