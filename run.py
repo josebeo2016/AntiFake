@@ -45,7 +45,7 @@ THRESHOLD_BASE = False
 ############################################### Configs ##################################################
 TARGET_SPEAKER_DATABASE = './speakers_database'
 NUM_RANDOM_TARGET_SPEAKER = 24 
-
+SELECTED_RANK = 5
 RTVC_DEFAULT_MODEL_PATH = "./saved_models"
 AVC_CONFIG_PATH = "./adaptive_voice_conversion/config.yaml"
 COQUI_YOURTTS_PATH = "tts_models/multilingual/multi-dataset/your_tts"
@@ -531,7 +531,7 @@ if __name__ == "__main__":
     # sort the target_speakers_selected following the overall_weights
     target_speakers_selected = [x for _, x in sorted(zip(overall_weights, target_speakers_selected), key=lambda pair: pair[0], reverse=True)]
     
-    selected_target_speaker_path = target_speakers_selected[S]
+    selected_target_speaker_path = target_speakers_selected[SELECTED_RANK]
     print(f"Selected target speaker: {selected_target_speaker_path}")
     print('Target selected, preparing attack...')
     # Get selected target speaker's emebdding, preparing the attack
