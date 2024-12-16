@@ -32,6 +32,10 @@ from tortoise.tortoise_backward import load_voice_path, TextToSpeech, get_condit
 
 from audioseal_loudness_loss import TFLoudnessRatio
 
+# for ASV score
+from asv_redimnet import asv_score, speaker_asv
+import librosa
+
 ############################################### Options ##################################################
 OUTPUT_DIR = './output/protected.wav'
 
@@ -45,7 +49,7 @@ THRESHOLD_BASE = False
 ############################################### Configs ##################################################
 TARGET_SPEAKER_DATABASE = './speakers_database'
 NUM_RANDOM_TARGET_SPEAKER = 24 
-SELECTED_RANK = 5
+SELECTED_RANK = 2
 RTVC_DEFAULT_MODEL_PATH = "./saved_models"
 AVC_CONFIG_PATH = "./adaptive_voice_conversion/config.yaml"
 COQUI_YOURTTS_PATH = "tts_models/multilingual/multi-dataset/your_tts"
@@ -66,7 +70,7 @@ quality_weight_snr = 0.005
 quality_weight_L2 = 0.05
 quality_weight_frequency = 0.2 
 quality_weight_tfloudness = 0.6 
-learning_rate = 0.0005 # 0.001
+learning_rate = 0.001 # 0.001
 weight_decay_iter = 100 
 weight_decay_rate = 0.9
 avc_scale = 0.18
@@ -74,7 +78,7 @@ coqui_scale = 0.85
 tortoise_autoregressive_scale = 0.02
 tortoise_diffusion_scale = 0.014
 rtvc_scale = 1
-QUALITY_THRESHOLD = -0.1 # -0.2
+QUALITY_THRESHOLD = -0.2 # -0.2
 ##########################################################################################################
 
 
@@ -460,6 +464,31 @@ if __name__ == "__main__":
     random.shuffle(target_speakers_files)
     target_speakers_selected = target_speakers_files[:NUM_RANDOM_TARGET_SPEAKER]
     
+    # instead of user listening. we will compute the embedding differences using ASV
+    print("Computing source speaker embedding...")
+    source_speaker_wav, _ = librosa.load(source_speaker_path, sr=SAMPLING_RATE)
+    source_speaker_asv = speaker_asv(source_speaker_wav)
+    asv_score_diff = []
+    for target_speaker_path in target_speakers_selected:
+        # try to load database asv score
+        score_path = target_speaker_path.replace(".wav", ".pt")
+        if os.path.exists(score_path):
+            target_speaker_asv = torch.load(score_path)
+        else:
+            target_speaker_wav, _ = librosa.load(target_speaker_path, sr=SAMPLING_RATE)
+            target_speaker_asv = speaker_asv(target_speaker_wav)
+            torch.save(target_speaker_asv, score_path)
+        # print(f"ASV score source: {source_speaker_asv}")
+        # print(f"ASV score target: {target_speaker_asv}")
+        diff_ = torch.nn.functional.cosine_similarity(source_speaker_asv, target_speaker_asv).item()
+        # inverse the cosine similarity to get the difference
+        diff_ = 1 - diff_
+        # normalize the difference
+        diff_ = diff_ / 2
+        print(f"{target_speaker_path} - ASV score diff: {diff_}")
+        asv_score_diff.append(diff_)
+        
+        
     # User listens to source and targets, assign score to each
     # pygame.mixer.init()
     # user_scores = []
@@ -525,14 +554,15 @@ if __name__ == "__main__":
     ltotal_embedding_diffs_weights = np.array(total_embedding_diffs) / np.sum(total_embedding_diffs)
     # Aggregate the weights
     # overall_weights = 0.5 * user_scores_weights + 0.5 * ltotal_embedding_diffs_weights
-    overall_weights = ltotal_embedding_diffs_weights
+    # overall_weights = ltotal_embedding_diffs_weights
+    overall_weights = ltotal_embedding_diffs_weights + np.array(asv_score_diff)
     # Find the item with the highest score
     # selected_target_speaker_path = target_speakers_selected[np.argmax(overall_weights)]
     # sort the target_speakers_selected following the overall_weights
     target_speakers_selected = [x for _, x in sorted(zip(overall_weights, target_speakers_selected), key=lambda pair: pair[0], reverse=True)]
     
     selected_target_speaker_path = target_speakers_selected[SELECTED_RANK]
-    print(f"Selected target speaker: {selected_target_speaker_path}")
+    # print(f"Selected target speaker: {selected_target_speaker_path}")
     print('Target selected, preparing attack...')
     # Get selected target speaker's emebdding, preparing the attack
     avc_embed_initial = None
