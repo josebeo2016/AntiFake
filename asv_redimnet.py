@@ -21,6 +21,18 @@ def asv_score(x: np.ndarray, y: np.ndarray) -> float:
         score = torch.nn.functional.cosine_similarity(score_x, score_y)
     return score.item()
 
+
+def speaker_asv(x: np.ndarray) -> np.ndarray:
+    # x, y are numpy arrays with shape (n_samples, )
+    global model
+
+    # score is a float
+    x = torch.from_numpy(x).unsqueeze(0).cuda().float()
+
+    with torch.no_grad():
+        score_x= model(x)
+    return score_x
+
 if __name__ == '__main__':
     # test
     x = np.random.randn(16000)
