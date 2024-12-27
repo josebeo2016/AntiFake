@@ -53,4 +53,4 @@ test_spm.model
 
 # log files
 *.log
-
+logs/
