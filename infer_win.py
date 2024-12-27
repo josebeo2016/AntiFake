@@ -6,10 +6,12 @@ import librosa
 
 if __name__ == '__main__':
     # Input text
-    input_text = input("Enter the text to generate: ")
+    # input_text = input("Enter the text to generate: ")
+    input_text = 'To convert the audio file to the acceptable format of AntiFake, please use the following'
 
     # Load source speaker
     source_speaker = sys.argv[1]
+    config_path = sys.argv[2]
     speaker_name = os.path.splitext(os.path.basename(source_speaker))[0]
 
     # Create a new directory, remove if it already exists
@@ -23,7 +25,7 @@ if __name__ == '__main__':
 
     # Add watermark to the source speaker
     print("Adding watermark to the source speaker...")
-    os.system(f"python run.py samples/{speaker_name}/source/source.wav samples/{speaker_name}/protected/protected.wav")
+    os.system(f"python run.py samples/{speaker_name}/source/source.wav samples/{speaker_name}/protected/protected.wav logs/{speaker_name} {config_path}")
 
     # Generate the audio
     print("Generating audio using Tortoise-TTS...")

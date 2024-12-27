@@ -1,0 +1,39 @@
+############################################### Options ##################################################
+RTVC_LOSS: true
+AVC_LOSS: true
+COQUI_LOSS: true
+TORTOISE_AUTOREGRESSIVE_LOSS: true
+TORTOISE_DIFFUSION_LOSS: true
+
+THRESHOLD_BASE: true
+############################################### Configs ##################################################
+NUM_RANDOM_TARGET_SPEAKER: 24
+SELECTED_RANK: 0
+SOURCE_SPEAKER_PATH: null
+
+AVC_ENCODER_MODEL: null
+COQUI_ENCODER_MODEL: null
+TORTOISE_ENCODER_MODEL_AUTOREGRESSIVE: null
+TORTOISE_ENCODER_MODEL_DIFFUSION: null
+RTVC_ENCODER_MODEL: null
+
+SAMPLING_RATE: 16000
+ATTACK_ITERATIONS: 1000
+DEVICE: 'cuda'
+######################################### Tunable Parameters #############################################
+quality_weight: 0.5
+quality_weight_snr: 0.005
+quality_weight_pesq: 0.15
+quality_weight_L2: 0.05
+quality_weight_frequency: 0
+quality_weight_tfloudness: 0.6
+learning_rate: 0.01
+weight_decay_iter: 100
+weight_decay_rate: 0.9
+avc_scale: 0.18
+coqui_scale: 0.85
+tortoise_autoregressive_scale: 0.02
+tortoise_diffusion_scale: 0.014
+rtvc_scale: 1
+QUALITY_THRESHOLD: -0.1
+##########################################################################################################

@@ -14,6 +14,9 @@ import torch.nn as nn
 import torchaudio
 import csv
 import random
+import torchaudio
+from tqdm import tqdm
+from torch.utils.tensorboard import SummaryWriter
 # import pygame
 
 sys.path.insert(0, "./rtvc")
@@ -35,10 +38,13 @@ from audioseal_loudness_loss import TFLoudnessRatio
 # for ASV score
 from asv_redimnet import asv_score, speaker_asv
 import librosa
+# PESQ
+from pesq import pesq
+
 
 ############################################### Options ##################################################
 OUTPUT_DIR = './output/protected.wav'
-
+LOG_DIR = './output/log'
 RTVC_LOSS = True
 AVC_LOSS = True
 COQUI_LOSS = True
@@ -48,8 +54,8 @@ TORTOISE_DIFFUSION_LOSS = True
 THRESHOLD_BASE = False
 ############################################### Configs ##################################################
 TARGET_SPEAKER_DATABASE = './speakers_database'
-NUM_RANDOM_TARGET_SPEAKER = 24 
-SELECTED_RANK = 2
+NUM_RANDOM_TARGET_SPEAKER = 24
+SELECTED_RANK = 0
 RTVC_DEFAULT_MODEL_PATH = "./saved_models"
 AVC_CONFIG_PATH = "./adaptive_voice_conversion/config.yaml"
 COQUI_YOURTTS_PATH = "tts_models/multilingual/multi-dataset/your_tts"
@@ -66,11 +72,13 @@ SAMPLING_RATE = 16000
 ATTACK_ITERATIONS = 1000 
 DEVICE = 'cuda'
 ######################################### Tunable Parameters #############################################
+quality_weight = 0.5
 quality_weight_snr = 0.005
+quality_weight_pesq = 0.15
 quality_weight_L2 = 0.05
 quality_weight_frequency = 0.2 
-quality_weight_tfloudness = 0.6 
-learning_rate = 0.001 # 0.001
+quality_weight_tfloudness = 0.6
+learning_rate = 0.01 # 0.001
 weight_decay_iter = 100 
 weight_decay_rate = 0.9
 avc_scale = 0.18
@@ -78,7 +86,7 @@ coqui_scale = 0.85
 tortoise_autoregressive_scale = 0.02
 tortoise_diffusion_scale = 0.014
 rtvc_scale = 1
-QUALITY_THRESHOLD = -0.2 # -0.2
+QUALITY_THRESHOLD = -0.1 # -0.2
 ##########################################################################################################
 
 
@@ -237,13 +245,14 @@ def attack_iteration(wav_tensor_list,
                     rtvc_embed_target = None,
                     rtvc_embed_threshold = None,
                     ):
-    
-    
 
     global learning_rate
+    timestamp = time.time()
+    log_name = "_{}_Threshold_{}_{}_{}_{}_{}_{}".format(timestamp,quality_weight_snr,quality_weight_pesq, quality_weight_L2, quality_weight_frequency, quality_weight_tfloudness, learning_rate) if THRESHOLD_BASE else "_{}_NoThreshold_{}_{}_{}_{}_{}_{}".format(timestamp,quality_weight_snr,quality_weight_pesq, quality_weight_L2, quality_weight_frequency, quality_weight_tfloudness, learning_rate)
+    writer = SummaryWriter(log_dir=LOG_DIR+log_name)
     tfloudness = TFLoudnessRatio(sample_rate=SAMPLING_RATE, n_bands=16)
     wav_tensor_updated = None
-    for iter in range(ATTACK_ITERATIONS):
+    for iter in tqdm(range(ATTACK_ITERATIONS), ncols=100):
         
         if iter % (weight_decay_iter) == 0 and iter != 0:
             learning_rate = learning_rate * weight_decay_rate
@@ -280,7 +289,7 @@ def attack_iteration(wav_tensor_list,
         signal_power = torch.mean(torch.square(wav_tensor_updated))
         noise_power = torch.mean(diff_waveform_squared)
         quality_snr = 10 * torch.log10(signal_power / (noise_power + 1e-8)) 
-        
+        quality_pesq = pesq(SAMPLING_RATE,wav_tensor_updated.squeeze().detach().cpu().numpy(), wav_tensor_initial.squeeze().detach().cpu().numpy(),'wb')
         # calculate frequency filter
         quality_frequency = frequency_filter(wav_tensor_updated - wav_tensor_initial)
         
@@ -288,18 +297,28 @@ def attack_iteration(wav_tensor_list,
         quality_tf_loudness = tfloudness(wav_tensor_updated.unsqueeze(0), wav_tensor_initial.unsqueeze(0))
         
         # aggregate loss 
-        quality_term = quality_weight_snr * quality_snr - quality_weight_L2 * quality_l2_norm - quality_weight_frequency * quality_frequency - quality_weight_tfloudness * quality_tf_loudness
+        quality_term = quality_weight_snr * quality_snr + quality_weight_pesq * quality_pesq - quality_weight_L2 * quality_l2_norm - quality_weight_frequency * quality_frequency - quality_weight_tfloudness * quality_tf_loudness
         # quality_term = quality_weight_snr * quality_snr - quality_weight_L2 * quality_l2_norm - quality_weight_tfloudness * quality_tf_loudness
-        loss = -loss + quality_term
-
-        print("Quality term: ", quality_term)
-        print("Loss: ", loss)
+        loss = -loss + quality_term * quality_weight
+        # print("Quality term: ", quality_term)
+        # print("Loss: ", loss)
         
         # PHUCDT
         # stop the attack if the quality_term is < Quality threshold
         if quality_term < QUALITY_THRESHOLD:
             break
+        # Log metrics to TensorBoard
+        writer.add_scalar('Quality/SNR', quality_snr.item(), iter)
+        writer.add_scalar('Quality/PESQ', quality_pesq, iter)
+        writer.add_scalar('Penalty/L2_Norm', quality_l2_norm, iter)
+        writer.add_scalar('Penalty/Frequency', quality_frequency, iter)
+        writer.add_scalar('Penalty/TF_Loudness', quality_tf_loudness, iter)
+        writer.add_scalar('Quality Term', quality_term.item(), iter)
+        writer.add_scalar('Loss', loss.item(), iter)
         
+        # log the wav file every 10 iterations
+        if iter % 10 == 0:
+            writer.add_audio('Updated Audio', wav_tensor_updated, iter, sample_rate=SAMPLING_RATE)
         loss.backward(retain_graph=True)
         
         attributions = wav_tensor_updated.grad.data
@@ -326,17 +345,18 @@ def attack_iteration(wav_tensor_list,
         #     sf.write(OUTPUT_DIR, wav_updated, SAMPLING_RATE)
         
         # Calculate the progress of the attack
-        progress = (iter + 1) / ATTACK_ITERATIONS
+        # progress = (iter + 1) / ATTACK_ITERATIONS
         
         # Update the progress bar
-        bar_length = 20
-        filled_length = int(bar_length * progress)
-        bar = '#' * filled_length + '-' * (bar_length - filled_length)
-        print(f'\rProgress: |{bar}| {progress:.2%}', end='', flush=True)
-        print("\n")
+        # bar_length = 20
+        # filled_length = int(bar_length * progress)
+        # bar = '#' * filled_length + '-' * (bar_length - filled_length)
+        # print(f'\rProgress: |{bar}| {progress:.2%}', end='', flush=True)
+        # print("\n")
         
     wav_updated = wav_tensor_updated.detach().cpu().numpy().squeeze()
     sf.write(OUTPUT_DIR, wav_updated, SAMPLING_RATE)
+    print("Attack completed at iteration: ", iter)
     
 
     
@@ -438,7 +458,18 @@ if __name__ == "__main__":
     
     source_speaker_path = sys.argv[1]
     OUTPUT_DIR = sys.argv[2]
-    
+    LOG_DIR = sys.argv[3]
+    if len(sys.argv) > 4:
+        print("Using config file: {}".format(sys.argv[4]))
+        config_file = sys.argv[4]
+    else:
+        print("Using default config file...")
+        config_file = "default.yaml"
+    # load yaml config file and set the parameters
+    with open(config_file) as f:
+        conf = yaml.safe_load(f)
+    # set the parameters dynamically
+    globals().update(conf)
     # Setup RTVC encoders to load source speaker
     print("Loading source speaker...")
     ensure_default_models(Path(RTVC_DEFAULT_MODEL_PATH))
@@ -483,11 +514,9 @@ if __name__ == "__main__":
         diff_ = torch.nn.functional.cosine_similarity(source_speaker_asv, target_speaker_asv).item()
         # inverse the cosine similarity to get the difference
         diff_ = 1 - diff_
-        # normalize the difference
-        diff_ = diff_ / 2
         print(f"{target_speaker_path} - ASV score diff: {diff_}")
         asv_score_diff.append(diff_)
-        
+    ltotal_asv_score_diff = np.array(asv_score_diff) / np.sum(asv_score_diff)
         
     # User listens to source and targets, assign score to each
     # pygame.mixer.init()
@@ -555,7 +584,8 @@ if __name__ == "__main__":
     # Aggregate the weights
     # overall_weights = 0.5 * user_scores_weights + 0.5 * ltotal_embedding_diffs_weights
     # overall_weights = ltotal_embedding_diffs_weights
-    overall_weights = ltotal_embedding_diffs_weights + np.array(asv_score_diff)
+    
+    overall_weights = ltotal_embedding_diffs_weights + ltotal_asv_score_diff
     # Find the item with the highest score
     # selected_target_speaker_path = target_speakers_selected[np.argmax(overall_weights)]
     # sort the target_speakers_selected following the overall_weights
