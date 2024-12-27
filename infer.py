@@ -4,7 +4,9 @@ from asv_redimnet import asv_score
 import librosa
 if __name__ == '__main__':
     # input text
-    input_text = input("Enter the text to generate: ")
+    # input_text = input("Enter the text to generate: ")
+    input_text = 'To convert the audio file to the acceptable format of AntiFake, please use the following'
+    
     
     # load source speaker
     source_speaker = sys.argv[1]
